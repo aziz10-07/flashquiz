@@ -1,0 +1,115 @@
+[
+  {
+    "question": "ما هو الفرق بين var و let في JavaScript؟",
+    "type": "mcq",
+    "options": [
+      "لا فرق بينهما",
+      "var لها نطاق الدالة، let لها نطاق الكتلة {}",
+      "let أقدم من var",
+      "var لا يمكن إعادة تعيينها"
+    ],
+    "answer": "var لها نطاق الدالة، let لها نطاق الكتلة {}",
+    "explanation": "var تعمل على مستوى الدالة بأكملها، أما let فتعمل فقط داخل الكتلة {} التي عُرِّفت فيها."
+  },
+  {
+    "question": "const تمنعك من تغيير قيمة المتغير نهائياً.",
+    "type": "truefalse",
+    "answer": "خطأ",
+    "explanation": "const تمنع إعادة التعيين، لكن إذا كانت القيمة object أو array فيمكنك تعديل محتواها."
+  },
+  {
+    "question": "ما هو ناتج: typeof null في JavaScript؟",
+    "type": "mcq",
+    "options": ["null", "undefined", "object", "boolean"],
+    "answer": "object",
+    "explanation": "هذه إحدى الأخطاء الشهيرة في JS — typeof null يُرجع 'object' وليس 'null'، وهو خطأ قديم في اللغة."
+  },
+  {
+    "question": "ما الفرق بين == و === ؟",
+    "type": "mcq",
+    "options": [
+      "لا فرق",
+      "== تقارن القيمة فقط، === تقارن القيمة والنوع",
+      "=== أبطأ من ==",
+      "== تقارن القيمة والنوع"
+    ],
+    "answer": "== تقارن القيمة فقط، === تقارن القيمة والنوع",
+    "explanation": "مثال: '5' == 5 يُرجع true، لكن '5' === 5 يُرجع false لأن النوع مختلف."
+  },
+  {
+    "question": "JavaScript لغة متزامنة (synchronous) بشكل افتراضي.",
+    "type": "truefalse",
+    "answer": "صح",
+    "explanation": "JS تنفذ الكود سطراً بسطر بشكل متزامن، لكن يمكنها التعامل مع العمليات غير المتزامنة عبر Callbacks و Promises و async/await."
+  },
+  {
+    "question": "ما هو ناتج: console.log(0.1 + 0.2 === 0.3) ؟",
+    "type": "mcq",
+    "options": ["true", "false", "undefined", "خطأ في الكود"],
+    "answer": "false",
+    "explanation": "بسبب دقة الأرقام العشرية في JS، 0.1 + 0.2 = 0.30000000000000004 وليس 0.3 بالضبط!"
+  },
+  {
+    "question": "ما الكلمة المفتاحية لإنشاء دالة؟",
+    "type": "written",
+    "answer": "function",
+    "explanation": "نكتب: function myFunc() {} أو يمكن استخدام Arrow Function: const myFunc = () => {}"
+  },
+  {
+    "question": "Arrow Functions لها this خاص بها مثل الدوال العادية.",
+    "type": "truefalse",
+    "answer": "خطأ",
+    "explanation": "Arrow Functions لا تملك this خاصاً بها، بل ترث this من السياق المحيط بها (lexical this)."
+  },
+  {
+    "question": "أي من هذه الطرق تُضيف عنصر في نهاية مصفوفة؟",
+    "type": "mcq",
+    "options": ["array.push()", "array.pop()", "array.shift()", "array.unshift()"],
+    "answer": "array.push()",
+    "explanation": "push() يضيف للنهاية، pop() يحذف من النهاية، unshift() يضيف للبداية، shift() يحذف من البداية."
+  },
+  {
+    "question": "ما هو مفهوم Hoisting في JavaScript؟",
+    "type": "mcq",
+    "options": [
+      "تحويل الكود إلى لغة آلة",
+      "رفع تعريفات المتغيرات والدوال لأعلى الكود قبل التنفيذ",
+      "تحسين أداء الكود تلقائياً",
+      "حذف المتغيرات غير المستخدمة"
+    ],
+    "answer": "رفع تعريفات المتغيرات والدوال لأعلى الكود قبل التنفيذ",
+    "explanation": "بسبب Hoisting يمكنك استدعاء دالة قبل تعريفها في الكود، لكن المتغيرات المعرفة بـ let/const لا تُرفع بنفس الطريقة."
+  },
+  {
+    "question": "ما هو ناتج: Boolean('') ؟",
+    "type": "mcq",
+    "options": ["true", "false", "undefined", "''"],
+    "answer": "false",
+    "explanation": "القيم الـ Falsy في JS هي: false, 0, '', null, undefined, NaN — أي string فارغ يُحوَّل إلى false."
+  },
+  {
+    "question": "Promises في JavaScript تُستخدم للتعامل مع العمليات غير المتزامنة.",
+    "type": "truefalse",
+    "answer": "صح",
+    "explanation": "Promise تمثل قيمة قد تكون متاحة الآن أو في المستقبل، وتمر بثلاث حالات: pending, fulfilled, rejected."
+  },
+  {
+    "question": "ما هو ناتج: typeof undefined ؟",
+    "type": "written",
+    "answer": "undefined",
+    "explanation": "typeof undefined يُرجع 'undefined' — على عكس null الذي يُرجع 'object'."
+  },
+  {
+    "question": "أي method تُحوّل JSON string إلى Object؟",
+    "type": "mcq",
+    "options": ["JSON.stringify()", "JSON.parse()", "JSON.convert()", "JSON.toObject()"],
+    "answer": "JSON.parse()",
+    "explanation": "JSON.parse() تحوّل string إلى object، أما JSON.stringify() فتحوّل object إلى string."
+  },
+  {
+    "question": "يمكن استخدام break داخل حلقة for لإيقافها.",
+    "type": "truefalse",
+    "answer": "صح",
+    "explanation": "break تُوقف الحلقة تماماً، أما continue فتتخطى التكرار الحالي وتكمل باقي الحلقة."
+  }
+]
