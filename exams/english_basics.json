@@ -1,0 +1,8 @@
+[
+  {"question":"What animal is this?","type":"mcq","image":"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/400px-Cat03.jpg","options":["Dog","Cat","Fox","Rabbit"],"answer":"Cat","explanation":"هذه قطة — Cat"},
+  {"question":"The sky is blue.","type":"truefalse","answer":"صح","explanation":"السماء زرقاء — The sky is blue"},
+  {"question":"Write the English word for (كتاب):","type":"written","answer":"book","explanation":"كتاب = Book"},
+  {"question":"Which is correct spelling?","type":"mcq","options":["Elefant","Elephant","Elifant","Elephent"],"answer":"Elephant","explanation":"الكلمة الصحيحة Elephant — فيل"},
+  {"question":"'Good Morning' means صباح الخير","type":"truefalse","answer":"صح","explanation":"Good Morning = صباح الخير"},
+  {"question":"Write the English word for (تفاحة):","type":"written","answer":"apple","explanation":"تفاحة = Apple"}
+]
