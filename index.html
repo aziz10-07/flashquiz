@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlashQuiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c27;
+  --border: #2a2a3d;
+  --accent: #7c6aff;
+  --accent2: #ff6a9e;
+  --accent3: #6affda;
+  --text: #e8e8f0;
+  --muted: #6b6b85;
+  --correct: #22c55e;
+  --wrong: #ef4444;
+  --sidebar-w: 280px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; overflow-x: hidden; }
+
+/* ===== GRID BG ===== */
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: linear-gradient(var(--border) 1px,transparent 1px), linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size: 40px 40px; opacity: 0.25; z-index: 0; pointer-events: none;
+}
+.glow { position: fixed; border-radius: 50%; filter: blur(130px); opacity: 0.1; z-index: 0; pointer-events: none; }
+.glow.a { width: 500px; height: 500px; background: var(--accent); top: -150px; right: -100px; }
+.glow.b { width: 350px; height: 350px; background: var(--accent2); bottom: -80px; left: 100px; }
+
+/* ===== SIDEBAR ===== */
+#sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; right: 0; top: 0; bottom: 0;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+#sidebar.hidden { transform: translateX(calc(var(--sidebar-w) + 10px)); }
+
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.4rem; font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  letter-spacing: -1px;
+}
+.sidebar-subtitle { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 1rem 0; }
+
+.nav-section { margin-bottom: 0.5rem; }
+.nav-section-header {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+  cursor: pointer; user-select: none;
+  transition: color 0.2s;
+}
+.nav-section-header:hover { color: var(--text); }
+.nav-section-arrow { margin-right: auto; font-size: 0.6rem; transition: transform 0.2s; }
+.nav-section.open .nav-section-arrow { transform: rotate(90deg); }
+.nav-section-items { display: none; }
+.nav-section.open .nav-section-items { display: block; }
+
+.exam-item {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.65rem 1.2rem 0.65rem 1.5rem;
+  cursor: pointer; transition: background 0.15s;
+  border-right: 2px solid transparent;
+  font-size: 0.9rem; color: var(--muted);
+}
+.exam-item:hover { background: var(--surface2); color: var(--text); }
+.exam-item.active { border-right-color: var(--accent); color: var(--text); background: rgba(124,106,255,0.08); }
+.exam-item-info { flex: 1; min-width: 0; }
+.exam-item-title { font-weight: 500; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exam-item-count { font-size: 0.72rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+.sidebar-footer {
+  padding: 1rem 1.2rem;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 0.5rem;
+}
+.footer-btn {
+  flex: 1; padding: 0.6rem; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--muted); font-family: 'Tajawal', sans-serif;
+  font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+}
+.footer-btn:hover { border-color: var(--accent); color: var(--accent); }
+.footer-btn.upload-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+/* ===== MAIN ===== */
+#main {
+  flex: 1;
+  margin-right: var(--sidebar-w);
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  position: relative; z-index: 1;
+  transition: margin-right 0.3s;
+}
+#main.full { margin-right: 0; }
+
+/* toggle button */
+#sidebarToggle {
+  position: fixed; top: 1rem; right: 1rem;
+  z-index: 200;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); width: 38px; height: 38px;
+  border-radius: 10px; cursor: pointer; font-size: 1rem;
+  display: none; align-items: center; justify-content: center;
+  transition: border-color 0.2s;
+}
+#sidebarToggle:hover { border-color: var(--accent); }
+
+/* ===== SCREENS ===== */
+.view { display: none; width: 100%; max-width: 760px; flex-direction: column; align-items: center; }
+.view.active { display: flex; }
+
+/* ===== HOME VIEW ===== */
+.home-hero { text-align: center; margin-bottom: 3rem; }
+.home-title {
+  font-size: clamp(2rem, 5vw, 3rem); font-weight: 900;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 0.5rem;
+}
+.home-sub { color: var(--muted); font-size: 1rem; }
+
+.upload-zone {
+  width: 100%; max-width: 480px;
+  border: 2px dashed var(--border); border-radius: 20px;
+  padding: 2.5rem 2rem; text-align: center; cursor: pointer;
+  transition: all 0.3s; background: var(--surface); position: relative; overflow: hidden;
+}
+.upload-zone:hover { border-color: var(--accent); transform: translateY(-3px); }
+.upload-zone.drag-over { border-color: var(--accent3); transform: scale(1.02); }
+.upload-icon { font-size: 2.5rem; display: block; margin-bottom: 0.8rem; }
+.upload-zone p { color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
+.upload-zone strong { color: var(--text); }
+#fileInput { display: none; }
+
+.or-divider { color: var(--muted); font-size: 0.8rem; margin: 1.2rem 0; display: flex; align-items: center; gap: 1rem; width: 100%; max-width: 480px; }
+.or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.demo-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.7rem 2rem; border-radius: 10px; cursor: pointer;
+  font-family: 'Tajawal', sans-serif; font-size: 0.9rem; transition: all 0.2s;
+}
+.demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ===== EXAM DETAIL VIEW ===== */
+.exam-detail-header { text-align: center; margin-bottom: 2.5rem; width: 100%; }
+.exam-detail-icon { font-size: 3rem; margin-bottom: 0.8rem; display: block; }
+.exam-detail-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 0.4rem; }
+.exam-detail-desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+.exam-meta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.meta-badge {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.4rem 0.9rem;
+  font-size: 0.8rem; color: var(--muted);
+  font-family: 'Space Mono', monospace;
+}
+.start-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; color: #fff; padding: 1rem 3rem;
+  border-radius: 14px; font-family: 'Tajawal', sans-serif;
+  font-size: 1.1rem; font-weight: 700; cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s; margin-top: 1rem;
+}
+.start-btn:hover { transform: translateY(-3px); opacity: 0.92; }
+
+/* ===== QUIZ VIEW ===== */
+.quiz-header {
+  width: 100%; display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;
+}
+.progress-wrap { flex: 1; }
+.progress-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.4rem; font-family: 'Space Mono', monospace; }
+.progress-bar { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.5s ease; }
+.score-badge { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.4rem 0.9rem; font-family: 'Space Mono', monospace; font-size: 0.82rem; white-space: nowrap; }
+.score-badge span { color: var(--accent3); }
+.quit-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s; flex-shrink: 0; }
+.quit-btn:hover { border-color: var(--wrong); color: var(--wrong); }
+
+.card-container { width: 100%; perspective: 1000px; margin-bottom: 1.5rem; }
+.card {
+  width: 100%; min-height: 200px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 24px; padding: 2.5rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; position: relative;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  animation: slideIn 0.35s ease;
+}
+@keyframes slideIn { from { opacity:0; transform:translateY(16px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+.card.correct-flash { border-color: var(--correct); box-shadow: 0 0 30px rgba(34,197,94,0.18); }
+.card.wrong-flash { border-color: var(--wrong); box-shadow: 0 0 30px rgba(239,68,68,0.18); }
+.card.has-image { padding: 1.5rem; align-items: flex-start; text-align: right; }
+.card-num { position: absolute; top: 1rem; left: 1.5rem; font-family: 'Space Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+.card-image { width: 100%; max-height: 240px; object-fit: contain; border-radius: 10px; margin-bottom: 1rem; border: 1px solid var(--border); background: var(--surface2); }
+.card-question { font-size: clamp(1rem, 3vw, 1.4rem); font-weight: 700; line-height: 1.5; }
+
+.options-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+@media(max-width:520px){ .options-grid { grid-template-columns: 1fr; } }
+.tf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; width: 100%; }
+
+.option-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); border-radius: 14px; padding: 0.9rem 1.1rem;
+  font-family: 'Tajawal', sans-serif; font-size: 0.95rem; font-weight: 500;
+  cursor: pointer; text-align: right; transition: all 0.2s;
+  display: flex; align-items: center; gap: 0.7rem;
+}
+.option-btn:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-2px); background: rgba(124,106,255,0.06); }
+.option-btn:disabled { cursor: default; }
+.option-btn.correct { border-color: var(--correct); background: rgba(34,197,94,0.1); color: #86efac; }
+.option-btn.wrong { border-color: var(--wrong); background: rgba(239,68,68,0.1); color: #fca5a5; }
+.opt-letter { width: 28px; height: 28px; border-radius: 7px; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; transition: background 0.2s; }
+.option-btn.correct .opt-letter { background: var(--correct); color: #fff; }
+.option-btn.wrong .opt-letter { background: var(--wrong); color: #fff; }
+.opt-text { flex: 1; }
+
+.answer-input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 14px; padding: 1rem 1.2rem; font-family: 'Tajawal', sans-serif; font-size: 1rem; direction: auto; transition: border-color 0.2s; outline: none; }
+.answer-input:focus { border-color: var(--accent); }
+.submit-btn { margin-top: 0.7rem; background: var(--accent); border: none; color: #fff; padding: 0.85rem; border-radius: 12px; font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; width: 100%; }
+.submit-btn:hover { opacity: 0.85; }
+
+.feedback { margin-top: 0.9rem; padding: 1rem 1.3rem; border-radius: 12px; font-size: 0.88rem; line-height: 1.6; width: 100%; animation: fadeUp 0.25s ease; display: none; }
+.feedback.show { display: block; }
+.feedback.correct { background: rgba(34,197,94,0.1); border: 1px solid var(--correct); color: #86efac; }
+.feedback.wrong { background: rgba(239,68,68,0.1); border: 1px solid var(--wrong); color: #fca5a5; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+.next-btn { margin-top: 1.2rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: #fff; padding: 0.85rem 2.5rem; border-radius: 12px; font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: transform 0.2s; display: none; }
+.next-btn.show { display: block; }
+.next-btn:hover { transform: translateY(-2px); }
+
+/* ===== RESULTS VIEW ===== */
+.results-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 24px; padding: 3rem 2rem; text-align: center;
+  width: 100%; max-width: 460px; position: relative; overflow: hidden;
+}
+.results-card::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3)); }
+.result-emoji { font-size: 3.5rem; margin-bottom: 0.8rem; display: block; }
+.result-title { font-size: 2rem; font-weight: 900; background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom: 0.4rem; }
+.result-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+.stats-row { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1.3rem; min-width: 80px; }
+.stat-num { font-family: 'Space Mono', monospace; font-size: 1.7rem; font-weight: 700; }
+.stat-num.g { color: var(--correct); } .stat-num.r { color: var(--wrong); } .stat-num.b { color: var(--accent); }
+.stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+.result-btns { display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap; }
+.btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:#fff; padding:0.8rem 1.8rem; border-radius:12px; font-family:'Tajawal',sans-serif; font-size:0.95rem; font-weight:700; cursor:pointer; transition:transform 0.2s; }
+.btn-primary:hover { transform:translateY(-2px); }
+.btn-secondary { background:transparent; border:1px solid var(--border); color:var(--text); padding:0.8rem 1.8rem; border-radius:12px; font-family:'Tajawal',sans-serif; font-size:0.95rem; cursor:pointer; transition:border-color 0.2s; }
+.btn-secondary:hover { border-color: var(--accent); }
+
+/* ===== ADMIN VIEW ===== */
+.admin-header { width:100%; margin-bottom:2rem; }
+.admin-title { font-size:1.6rem; font-weight:900; margin-bottom:0.3rem; }
+.admin-sub { color:var(--muted); font-size:0.88rem; }
+
+.admin-section { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:1.5rem; margin-bottom:1.2rem; }
+.admin-section-title { font-size:0.8rem; font-weight:700; color:var(--accent3); font-family:'Space Mono',monospace; letter-spacing:1px; margin-bottom:1.2rem; text-transform:uppercase; }
+
+.form-row { display:flex; gap:0.8rem; margin-bottom:0.8rem; flex-wrap:wrap; }
+.form-field { display:flex; flex-direction:column; gap:0.4rem; flex:1; min-width:180px; }
+.form-label { font-size:0.78rem; color:var(--muted); font-weight:600; }
+.form-input, .form-select, .form-textarea {
+  background:var(--surface2); border:1px solid var(--border); color:var(--text);
+  border-radius:10px; padding:0.65rem 0.9rem;
+  font-family:'Tajawal',sans-serif; font-size:0.9rem;
+  outline:none; transition:border-color 0.2s; direction:auto;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--accent); }
+.form-select { cursor:pointer; }
+.form-select option { background:var(--surface2); }
+.form-textarea { resize:vertical; min-height:80px; }
+
+.questions-list { display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem; }
+.q-item {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:10px; padding:0.8rem 1rem;
+  display:flex; align-items:center; gap:0.8rem;
+}
+.q-item-num { font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted); flex-shrink:0; width:24px; }
+.q-item-text { flex:1; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.q-item-type { font-size:0.7rem; color:var(--muted); background:var(--border); padding:0.2rem 0.5rem; border-radius:5px; flex-shrink:0; font-family:'Space Mono',monospace; }
+.q-item-del { background:transparent; border:none; color:var(--muted); cursor:pointer; font-size:1rem; padding:0.2rem 0.4rem; border-radius:5px; transition:color 0.2s; flex-shrink:0; }
+.q-item-del:hover { color:var(--wrong); }
+
+.add-q-btn {
+  width:100%; padding:0.7rem; border:1px dashed var(--border); border-radius:10px;
+  background:transparent; color:var(--muted); font-family:'Tajawal',sans-serif;
+  font-size:0.88rem; cursor:pointer; transition:all 0.2s;
+}
+.add-q-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.admin-actions { display:flex; gap:0.8rem; margin-top:0.5rem; flex-wrap:wrap; }
+.save-btn { flex:1; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:#fff; padding:0.85rem; border-radius:12px; font-family:'Tajawal',sans-serif; font-size:0.95rem; font-weight:700; cursor:pointer; transition:opacity 0.2s; min-width:150px; }
+.save-btn:hover { opacity:0.88; }
+.dl-btn { background:transparent; border:1px solid var(--border); color:var(--text); padding:0.85rem 1.5rem; border-radius:12px; font-family:'Tajawal',sans-serif; font-size:0.95rem; cursor:pointer; transition:border-color 0.2s; }
+.dl-btn:hover { border-color:var(--accent3); color:var(--accent3); }
+
+.toast {
+  position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:0.8rem 1.5rem; font-size:0.88rem; z-index:999;
+  opacity:0; transition:all 0.3s; pointer-events:none; white-space:nowrap;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { border-color:var(--correct); color:#86efac; }
+.toast.error { border-color:var(--wrong); color:#fca5a5; }
+
+/* question form modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:500; display:none; align-items:center; justify-content:center; padding:1rem; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:1.8rem; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
+.modal-title { font-size:1.1rem; font-weight:700; margin-bottom:1.2rem; }
+.modal-actions { display:flex; gap:0.8rem; margin-top:1.2rem; }
+
+/* options builder */
+.options-builder { display:flex; flex-direction:column; gap:0.5rem; }
+.option-row { display:flex; gap:0.5rem; align-items:center; }
+.option-row input { flex:1; }
+.opt-del-btn { background:transparent; border:1px solid var(--border); color:var(--muted); width:32px; height:32px; border-radius:7px; cursor:pointer; font-size:0.85rem; transition:all 0.2s; flex-shrink:0; }
+.opt-del-btn:hover { border-color:var(--wrong); color:var(--wrong); }
+.add-opt-btn { background:transparent; border:1px dashed var(--border); color:var(--muted); padding:0.45rem; border-radius:7px; cursor:pointer; font-size:0.8rem; font-family:'Tajawal',sans-serif; transition:all 0.2s; }
+.add-opt-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* file tags */
+.file-tag {
+  display:flex; align-items:center; gap:0.6rem;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:0.55rem 0.9rem;
+  font-size:0.82rem; animation: fadeUp 0.2s ease;
+}
+.file-tag-icon { font-size:1rem; flex-shrink:0; }
+.file-tag-name { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text); }
+.file-tag-count { font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--accent3); flex-shrink:0; }
+.file-tag-del { background:transparent; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; padding:0.1rem 0.3rem; border-radius:5px; transition:color 0.2s; flex-shrink:0; }
+.file-tag-del:hover { color:var(--wrong); }
+
+/* admin tabs */
+.admin-tabs { display:flex; gap:0; margin-bottom:1.5rem; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:4px; width:100%; }
+.admin-tab { flex:1; padding:0.6rem; border:none; background:transparent; color:var(--muted); font-family:'Tajawal',sans-serif; font-size:0.88rem; font-weight:600; cursor:pointer; border-radius:9px; transition:all 0.2s; }
+.admin-tab.active { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+.admin-tab-panel { display:none; width:100%; flex-direction:column; align-items:stretch; gap:1.2rem; }
+.admin-tab-panel.active { display:flex; }
+
+/* category manager */
+.cat-list { display:flex; flex-direction:column; gap:0.6rem; }
+.cat-item { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:0.9rem 1.1rem; display:flex; align-items:center; gap:0.8rem; }
+.cat-item-icon { font-size:1.4rem; flex-shrink:0; }
+.cat-item-info { flex:1; }
+.cat-item-name { font-weight:600; font-size:0.9rem; }
+.cat-item-id { font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted); }
+.cat-item-actions { display:flex; gap:0.4rem; flex-shrink:0; }
+.cat-action-btn { background:transparent; border:1px solid var(--border); color:var(--muted); width:30px; height:30px; border-radius:7px; cursor:pointer; font-size:0.8rem; transition:all 0.2s; }
+.cat-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+.cat-action-btn.del:hover { border-color:var(--wrong); color:var(--wrong); }
+
+/* icon picker */
+.icon-picker { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.4rem; }
+.icon-opt { width:36px; height:36px; border:1px solid var(--border); border-radius:8px; background:transparent; font-size:1.1rem; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+.icon-opt:hover, .icon-opt.selected { border-color:var(--accent); background:rgba(124,106,255,0.1); }
+
+/* loading */
+.loading { display:flex; align-items:center; gap:0.7rem; color:var(--muted); font-size:0.9rem; }
+.spinner { width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* empty state */
+.empty-state { text-align:center; color:var(--muted); padding:3rem 1rem; }
+.empty-state .e-icon { font-size:3rem; margin-bottom:1rem; display:block; }
+.empty-state p { font-size:0.9rem; line-height:1.7; }
+
+/* mobile */
+@media(max-width:768px) {
+  #sidebar { transform:translateX(calc(var(--sidebar-w) + 10px)); }
+  #sidebar.open { transform:translateX(0); }
+  #main { margin-right:0; }
+  #sidebarToggle { display:flex; }
+  .sidebar-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:99; display:none; }
+  .sidebar-overlay.show { display:block; }
+}
+</style>
+</head>
+<body>
+
+<div class="glow a"></div>
+<div class="glow b"></div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ===== SIDEBAR ===== -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">Flash⚡Quiz</div>
+    <div class="sidebar-subtitle">منصة الاختبارات التفاعلية</div>
+  </div>
+
+  <div class="sidebar-nav" id="sidebarNav">
+    <div class="loading" style="padding:1.5rem 1.2rem">
+      <div class="spinner"></div> جاري التحميل...
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="footer-btn upload-btn" onclick="showView('homeView')" title="رفع JSON">
+      📂 رفع ملف
+    </button>
+    <button class="footer-btn" onclick="showView('adminView')" title="لوحة الإدارة">
+      ⚙️ الإدارة
+    </button>
+  </div>
+</nav>
+
+<!-- Toggle btn (mobile) -->
+<button id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+
+<!-- ===== MAIN ===== -->
+<main id="main">
+
+  <!-- HOME VIEW -->
+  <div class="view active" id="homeView">
+    <div class="home-hero">
+      <div class="home-title">Flash⚡Quiz</div>
+      <p class="home-sub">اختر امتحان من القائمة أو ارفع ملفات JSON</p>
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <span class="upload-icon">📂</span>
+      <p><strong>اسحب وأفلت ملفات JSON هنا</strong></p>
+      <p style="margin-top:0.3rem;font-size:0.8rem">حتى 9 ملفات — يتم دمجهم في امتحان واحد</p>
+      <input type="file" id="fileInput" accept=".json" multiple>
+    </div>
+
+    <!-- Selected files list -->
+    <div id="filesList" style="display:none;width:100%;max-width:480px;margin-top:0.8rem;display:none;flex-direction:column;gap:0.4rem;"></div>
+
+    <div id="filesActions" style="display:none;width:100%;max-width:480px;margin-top:0.8rem;gap:0.6rem;flex-direction:column;">
+      <button class="start-btn" style="width:100%;margin-top:0" onclick="startMergedQuiz()">🚀 ابدأ الامتحان المدمج</button>
+      <button class="demo-btn" style="width:100%" onclick="clearFiles()">✕ إلغاء</button>
+    </div>
+
+    <p id="uploadError" style="display:none;color:var(--wrong);margin-top:0.8rem;font-size:0.85rem;text-align:center;"></p>
+
+    <div id="noFilesSection">
+      <div class="or-divider">أو</div>
+      <button class="demo-btn" onclick="loadDemo()">🎯 جرّب مثال تجريبي</button>
+    </div>
+  </div>
+
+  <!-- EXAM DETAIL VIEW -->
+  <div class="view" id="examDetailView">
+    <div class="exam-detail-header">
+      <span class="exam-detail-icon" id="detailIcon">📚</span>
+      <div class="exam-detail-title" id="detailTitle">اسم الامتحان</div>
+      <div class="exam-detail-desc" id="detailDesc">وصف الامتحان</div>
+      <div class="exam-meta">
+        <span class="meta-badge" id="detailCount">0 سؤال</span>
+        <span class="meta-badge" id="detailCategory">-</span>
+      </div>
+    </div>
+    <button class="start-btn" onclick="startSelectedExam()">🚀 ابدأ الامتحان</button>
+  </div>
+
+  <!-- QUIZ VIEW -->
+  <div class="view" id="quizView">
+    <div class="quiz-header">
+      <button class="quit-btn" onclick="quitQuiz()" title="خروج">✕</button>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span id="progressText">سؤال 1 من 1</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <div class="score-badge">✓ <span id="scoreDisplay">0</span></div>
+    </div>
+
+    <div class="card-container">
+      <div class="card" id="questionCard">
+        <span class="card-num" id="cardNum">#1</span>
+        <img id="cardImage" class="card-image" src="" alt="" style="display:none"/>
+        <div class="card-question" id="questionText">...</div>
+      </div>
+    </div>
+
+    <div class="options-grid" id="mcqOptions"></div>
+
+    <div class="tf-grid" id="tfOptions" style="display:none">
+      <button class="option-btn" id="trueBtn">
+        <span class="opt-letter">✓</span><span class="opt-text">صح</span>
+      </button>
+      <button class="option-btn" id="falseBtn">
+        <span class="opt-letter">✗</span><span class="opt-text">خطأ</span>
+      </button>
+    </div>
+
+    <div id="writtenOptions" style="display:none;width:100%">
+      <input type="text" class="answer-input" id="writtenInput" placeholder="اكتب إجابتك هنا..."/>
+      <button class="submit-btn" onclick="checkWritten()">تحقق من الإجابة</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">التالي ←</button>
+  </div>
+
+  <!-- RESULTS VIEW -->
+  <div class="view" id="resultsView">
+    <div class="results-card">
+      <span class="result-emoji" id="resultEmoji">🎉</span>
+      <div class="result-title" id="resultTitle">ممتاز!</div>
+      <p class="result-sub" id="resultSub"></p>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num g" id="correctCount">0</div><div class="stat-label">صح</div></div>
+        <div class="stat-box"><div class="stat-num r" id="wrongCount">0</div><div class="stat-label">خطأ</div></div>
+        <div class="stat-box"><div class="stat-num b" id="scorePercent">0%</div><div class="stat-label">النتيجة</div></div>
+      </div>
+      <div class="result-btns">
+        <button class="btn-primary" onclick="restartQuiz()">🔄 أعد الامتحان</button>
+        <button class="btn-secondary" onclick="goHome()">🏠 الرئيسية</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div class="view" id="adminView">
+    <div class="admin-header">
+      <div class="admin-title">⚙️ لوحة الإدارة</div>
+      <div class="admin-sub">أضف وعدّل الامتحانات والأقسام</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('tabExam', this)">📝 إنشاء امتحان</button>
+      <button class="admin-tab" onclick="switchAdminTab('tabCategories', this)">🗂 الأقسام</button>
+      <button class="admin-tab" onclick="switchAdminTab('tabCatalog', this)">📦 الكتالوج</button>
+    </div>
+
+    <!-- TAB 1: Create Exam -->
+    <div class="admin-tab-panel active" id="tabExam">
+      <div class="admin-section">
+        <div class="admin-section-title">// معلومات الامتحان</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">اسم الامتحان</label>
+            <input class="form-input" id="a_title" placeholder="مثال: أساسيات JavaScript" />
+          </div>
+          <div class="form-field">
+            <label class="form-label">القسم</label>
+            <select class="form-select" id="a_category"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">وصف مختصر</label>
+            <input class="form-input" id="a_desc" placeholder="مثال: مفردات ودوال وأكثر" />
+          </div>
+          <div class="form-field">
+            <label class="form-label">اسم الملف</label>
+            <input class="form-input" id="a_filename" placeholder="مثال: javascript_basics" dir="ltr"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <div class="admin-section-title">// الأسئلة (<span id="qCount">0</span>)</div>
+        <div class="questions-list" id="adminQuestionsList">
+          <div class="empty-state"><span class="e-icon">📝</span><p>ما في أسئلة بعد<br>اضغط "أضف سؤال" للبداية</p></div>
+        </div>
+        <button class="add-q-btn" onclick="openAddQuestion()">+ أضف سؤال</button>
+      </div>
+
+      <div class="admin-actions">
+        <button class="save-btn" onclick="downloadExam()">💾 حمّل JSON</button>
+        <button class="dl-btn" onclick="previewExam()">▶ معاينة</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: Categories -->
+    <div class="admin-tab-panel" id="tabCategories">
+      <div class="admin-section">
+        <div class="admin-section-title">// الأقسام الحالية</div>
+        <div class="cat-list" id="catList"></div>
+      </div>
+
+      <div class="admin-section">
+        <div class="admin-section-title">// قسم جديد</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">اسم القسم</label>
+            <input class="form-input" id="nc_name" placeholder="مثال: التاريخ" />
+          </div>
+          <div class="form-field">
+            <label class="form-label">ID (إنجليزي بدون مسافات)</label>
+            <input class="form-input" id="nc_id" placeholder="مثال: history" dir="ltr"/>
+          </div>
+        </div>
+        <div class="form-field" style="margin-bottom:0.8rem">
+          <label class="form-label">اختر أيقونة</label>
+          <div class="icon-picker" id="iconPicker"></div>
+          <input class="form-input" id="nc_icon" placeholder="أو اكتب إيموجي مباشرة 🎯" style="margin-top:0.5rem" />
+        </div>
+        <button class="save-btn" onclick="addCategory()" style="width:100%">+ أضف القسم</button>
+      </div>
+    </div>
+
+    <!-- TAB 3: Catalog -->
+    <div class="admin-tab-panel" id="tabCatalog">
+      <div class="admin-section">
+        <div class="admin-section-title">// catalog.json</div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.7">
+          بعد ما تضيف أقساماً وامتحانات، حمّل الـ catalog.json المحدّث وارفعه على GitHub ليظهر في القائمة الجانبية.
+        </p>
+        <div id="catalogPreview" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem;font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--muted);max-height:280px;overflow-y:auto;white-space:pre-wrap;direction:ltr;"></div>
+      </div>
+      <div class="admin-actions">
+        <button class="save-btn" onclick="downloadCatalog()">💾 حمّل catalog.json</button>
+        <button class="dl-btn" onclick="refreshCatalogPreview()">🔄 تحديث المعاينة</button>
+      </div>
+      <div style="padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:0.8rem;color:var(--muted);line-height:1.8">
+        <strong style="color:var(--accent3)">// خطوات الرفع على GitHub</strong><br>
+        1. من تاب "إنشاء امتحان" حمّل ملف الـ JSON<br>
+        2. من هنا حمّل catalog.json المحدّث<br>
+        3. ارفع ملف الامتحان في <code style="color:var(--accent)">exams/[قسم]/</code><br>
+        4. ارفع catalog.json في <code style="color:var(--accent)">exams/</code><br>
+        5. الموقع يحمّله تلقائياً 🎉
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ===== ADD QUESTION MODAL ===== -->
+<div class="modal-overlay" id="questionModal">
+  <div class="modal">
+    <div class="modal-title">➕ إضافة سؤال</div>
+
+    <div class="form-field" style="margin-bottom:0.8rem">
+      <label class="form-label">نوع السؤال</label>
+      <select class="form-select" id="m_type" onchange="onTypeChange()">
+        <option value="mcq">اختيار من متعدد (MCQ)</option>
+        <option value="truefalse">صح / خطأ</option>
+        <option value="written">إجابة مكتوبة</option>
+      </select>
+    </div>
+
+    <div class="form-field" style="margin-bottom:0.8rem">
+      <label class="form-label">السؤال</label>
+      <textarea class="form-textarea" id="m_question" placeholder="اكتب السؤال هنا..."></textarea>
+    </div>
+
+    <div class="form-field" style="margin-bottom:0.8rem">
+      <label class="form-label">رابط صورة (اختياري)</label>
+      <input class="form-input" id="m_image" placeholder="https://example.com/image.jpg" dir="ltr"/>
+    </div>
+
+    <!-- MCQ options -->
+    <div id="m_optionsSection" style="margin-bottom:0.8rem">
+      <label class="form-label" style="margin-bottom:0.5rem;display:block">الخيارات</label>
+      <div class="options-builder" id="m_optionsList"></div>
+      <button class="add-opt-btn" onclick="addOptionField()" style="margin-top:0.4rem;width:100%">+ أضف خيار</button>
+    </div>
+
+    <div class="form-field" style="margin-bottom:0.8rem">
+      <label class="form-label" id="m_answerLabel">الإجابة الصحيحة</label>
+      <select class="form-select" id="m_tfAnswer" style="display:none">
+        <option value="صح">صح</option>
+        <option value="خطأ">خطأ</option>
+      </select>
+      <input class="form-input" id="m_answer" placeholder="الإجابة الصحيحة بالضبط"/>
+    </div>
+
+    <div class="form-field" style="margin-bottom:0.5rem">
+      <label class="form-label">شرح (اختياري)</label>
+      <textarea class="form-textarea" id="m_explanation" placeholder="شرح يظهر بعد الإجابة..." style="min-height:60px"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="save-btn" onclick="saveQuestion()">✓ أضف السؤال</button>
+      <button class="btn-secondary" onclick="closeModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let catalog = null;
+let adminQuestions = [];
+let quizCards = [];
+let quizCurrent = 0;
+let quizCorrect = 0;
+let quizAnswered = false;
+let selectedExam = null;
+let currentExamData = null;
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  loadCatalog();
+  setupUpload();
+  setTimeout(initAdmin, 800);
+});
+
+// ============================================================
+// CATALOG / SIDEBAR
+// ============================================================
+async function loadCatalog() {
+  try {
+    const res = await fetch('exams/catalog.json');
+    if (!res.ok) throw new Error();
+    catalog = await res.json();
+    renderSidebar();
+    renderCategorySelect();
+    renderCatList();
+    refreshCatalogPreview();
+  } catch {
+    document.getElementById('sidebarNav').innerHTML =
+      `<div style="padding:1.2rem;font-size:0.8rem;color:var(--muted)">
+        لم يتم العثور على catalog.json<br>
+        <span style="color:var(--accent3)">شغّل الموقع على server محلي</span>
+       </div>`;
+  }
+}
+
+function renderSidebar() {
+  if (!catalog) return;
+  const nav = document.getElementById('sidebarNav');
+  nav.innerHTML = '';
+  catalog.categories.forEach(cat => {
+    const section = document.createElement('div');
+    section.className = 'nav-section open';
+    section.innerHTML = `
+      <div class="nav-section-header" onclick="this.parentElement.classList.toggle('open')">
+        <span>${cat.icon}</span>
+        <span>${cat.name}</span>
+        <span class="nav-section-arrow">▶</span>
+      </div>
+      <div class="nav-section-items" id="cat_${cat.id}"></div>
+    `;
+    nav.appendChild(section);
+    const itemsEl = section.querySelector(`#cat_${cat.id}`);
+    cat.exams.forEach(exam => {
+      const item = document.createElement('div');
+      item.className = 'exam-item';
+      item.dataset.examId = exam.id;
+      item.innerHTML = `
+        <div class="exam-item-info">
+          <div class="exam-item-title">${exam.title}</div>
+          <div class="exam-item-count">${exam.count} سؤال</div>
+        </div>
+      `;
+      item.onclick = () => selectExam(exam, cat);
+      itemsEl.appendChild(item);
+    });
+  });
+}
+
+function selectExam(exam, cat) {
+  selectedExam = { exam, cat };
+  // Mark active
+  document.querySelectorAll('.exam-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-exam-id="${exam.id}"]`)?.classList.add('active');
+  // Show detail
+  document.getElementById('detailIcon').textContent = cat.icon;
+  document.getElementById('detailTitle').textContent = exam.title;
+  document.getElementById('detailDesc').textContent = exam.description || '';
+  document.getElementById('detailCount').textContent = exam.count + ' سؤال';
+  document.getElementById('detailCategory').textContent = cat.name;
+  showView('examDetailView');
+  closeSidebar();
+}
+
+async function startSelectedExam() {
+  if (!selectedExam) return;
+  try {
+    const res = await fetch(selectedExam.exam.file);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    currentExamData = data;
+    beginQuiz(data);
+  } catch {
+    showToast('❌ تعذّر تحميل الامتحان', 'error');
+  }
+}
+
+// ============================================================
+// UPLOAD (multi-file)
+// ============================================================
+let pendingFiles = []; // { name, questions[] }
+
+function setupUpload() {
+  const zone = document.getElementById('uploadZone');
+  const input = document.getElementById('fileInput');
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  });
+  input.addEventListener('change', e => {
+    if (e.target.files.length) handleFiles(e.target.files);
+  });
+}
+
+function handleFiles(fileList) {
+  const files = [...fileList].filter(f => f.name.endsWith('.json'));
+  if (!files.length) { showUploadError('❌ اختر ملفات JSON فقط'); return; }
+
+  const total = pendingFiles.length + files.length;
+  if (total > 9) {
+    showUploadError('⚠️ الحد الأقصى 9 ملفات');
+    files.splice(9 - pendingFiles.length); // trim to fit
+  }
+
+  // read each file
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data) || !data.length) throw new Error();
+        pendingFiles.push({ name: file.name.replace('.json',''), questions: data });
+        renderFilesList();
+        document.getElementById('uploadError').style.display = 'none';
+      } catch {
+        showUploadError('❌ خطأ في ' + file.name);
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+function renderFilesList() {
+  const list = document.getElementById('filesList');
+  const actions = document.getElementById('filesActions');
+  const noFiles = document.getElementById('noFilesSection');
+
+  if (!pendingFiles.length) {
+    list.style.display = 'none';
+    actions.style.display = 'none';
+    noFiles.style.display = 'block';
+    return;
+  }
+
+  noFiles.style.display = 'none';
+  list.style.display = 'flex';
+  actions.style.display = 'flex';
+  list.innerHTML = '';
+
+  const total = pendingFiles.reduce((s, f) => s + f.questions.length, 0);
+
+  pendingFiles.forEach((f, i) => {
+    const tag = document.createElement('div');
+    tag.className = 'file-tag';
+    tag.innerHTML = `
+      <span class="file-tag-icon">📄</span>
+      <span class="file-tag-name">${f.name}</span>
+      <span class="file-tag-count">${f.questions.length} سؤال</span>
+      <button class="file-tag-del" onclick="removeFile(${i})">✕</button>
+    `;
+    list.appendChild(tag);
+  });
+
+  // total badge
+  const totalTag = document.createElement('div');
+  totalTag.style.cssText = 'font-size:0.8rem;color:var(--muted);text-align:center;padding:0.3rem;';
+  totalTag.innerHTML = `مجموع الأسئلة: <span style="color:var(--accent3);font-family:Space Mono,monospace">${total}</span>`;
+  list.appendChild(totalTag);
+}
+
+function removeFile(i) {
+  pendingFiles.splice(i, 1);
+  renderFilesList();
+}
+
+function clearFiles() {
+  pendingFiles = [];
+  document.getElementById('fileInput').value = '';
+  renderFilesList();
+}
+
+function startMergedQuiz() {
+  if (!pendingFiles.length) return;
+  const merged = pendingFiles.flatMap(f => f.questions);
+  if (!merged.length) { showUploadError('❌ الملفات فارغة'); return; }
+  currentExamData = merged;
+  clearFiles();
+  beginQuiz(merged);
+}
+
+function readFile(file) { handleFiles([file]); } // legacy compat
+
+function showUploadError(msg) {
+  const el = document.getElementById('uploadError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function loadDemo() {
+  const demo = [
+    { question:"ما هو أكبر كوكب في المجموعة الشمسية؟", type:"mcq", options:["المريخ","المشتري","زحل","نبتون"], answer:"المشتري", explanation:"المشتري أكبر كوكب في المجموعة الشمسية." },
+    { question:"الشمس نجم من نوع القزم الأصفر.", type:"truefalse", answer:"صح", explanation:"الشمس نجم من نوع G." },
+    { question:"كم عدد أشهر السنة الميلادية؟", type:"written", answer:"12", explanation:"السنة 12 شهراً." },
+    { question:"أي اللغات الأكثر انتشاراً؟", type:"mcq", options:["الإنجليزية","الإسبانية","المندرين","العربية"], answer:"المندرين", explanation:"المندرين لغة أكثر من مليار شخص." },
+    { question:"الأرض ثالث كوكب من الشمس.", type:"truefalse", answer:"صح" },
+    { question:"ما عاصمة اليابان؟", type:"written", answer:"طوكيو", explanation:"طوكيو عاصمة اليابان." },
+  ];
+  currentExamData = demo;
+  beginQuiz(demo);
+}
+
+// ============================================================
+// QUIZ ENGINE
+// ============================================================
+function beginQuiz(data) {
+  quizCards = shuffle([...data]);
+  quizCurrent = 0; quizCorrect = 0;
+  showView('quizView');
+  renderQuestion();
+}
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function renderQuestion() {
+  quizAnswered = false;
+  const card = quizCards[quizCurrent];
+  const pct = Math.round((quizCurrent / quizCards.length) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `سؤال ${quizCurrent+1} من ${quizCards.length}`;
+  document.getElementById('progressPercent').textContent = pct + '%';
+  document.getElementById('scoreDisplay').textContent = quizCorrect;
+  document.getElementById('cardNum').textContent = '#' + (quizCurrent+1);
+  document.getElementById('questionText').textContent = card.question;
+
+  const cardEl = document.getElementById('questionCard');
+  const imgEl = document.getElementById('cardImage');
+  if (card.image) {
+    imgEl.src = card.image; imgEl.alt = card.question;
+    imgEl.style.display = 'block'; cardEl.classList.add('has-image');
+  } else {
+    imgEl.src = ''; imgEl.style.display = 'none'; cardEl.classList.remove('has-image');
+  }
+  cardEl.classList.remove('correct-flash','wrong-flash');
+  cardEl.style.animation = 'none'; cardEl.offsetHeight; cardEl.style.animation = '';
+
+  document.getElementById('mcqOptions').style.display = 'none';
+  document.getElementById('tfOptions').style.display = 'none';
+  document.getElementById('writtenOptions').style.display = 'none';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('nextBtn').className = 'next-btn';
+
+  if (card.type === 'mcq') renderMCQ(card);
+  else if (card.type === 'truefalse') renderTF();
+  else renderWritten();
+}
+
+function renderMCQ(card) {
+  const c = document.getElementById('mcqOptions');
+  c.innerHTML = ''; c.style.display = 'grid';
+  const letters = ['أ','ب','ج','د','هـ','و'];
+  shuffle([...card.options]).forEach((opt,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span><span class="opt-text">${opt}</span>`;
+    btn.onclick = () => checkAnswer(opt, btn);
+    c.appendChild(btn);
+  });
+}
+
+function renderTF() {
+  document.getElementById('tfOptions').style.display = 'grid';
+  const t = document.getElementById('trueBtn'), f = document.getElementById('falseBtn');
+  t.className = 'option-btn'; f.className = 'option-btn';
+  t.disabled = false; f.disabled = false;
+  t.onclick = () => checkAnswer('صح'); f.onclick = () => checkAnswer('خطأ');
+}
+
+function renderWritten() {
+  document.getElementById('writtenOptions').style.display = 'block';
+  const inp = document.getElementById('writtenInput');
+  inp.value = ''; inp.style.borderColor = 'var(--border)'; inp.focus();
+  inp.onkeydown = e => { if (e.key==='Enter') checkWritten(); };
+}
+
+function checkAnswer(selected, btn) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const card = quizCards[quizCurrent];
+  const isCorrect = selected.trim().toLowerCase() === card.answer.trim().toLowerCase();
+  const cardEl = document.getElementById('questionCard');
+  cardEl.classList.add(isCorrect ? 'correct-flash' : 'wrong-flash');
+
+  if (card.type === 'mcq') {
+    document.querySelectorAll('#mcqOptions .option-btn').forEach(b => {
+      b.disabled = true;
+      const t = b.querySelector('.opt-text').textContent;
+      if (t === card.answer) b.classList.add('correct');
+      else if (t === selected && !isCorrect) b.classList.add('wrong');
+    });
+  }
+  if (card.type === 'truefalse') {
+    const tB = document.getElementById('trueBtn'), fB = document.getElementById('falseBtn');
+    tB.disabled = true; fB.disabled = true;
+    if (card.answer === 'صح') tB.classList.add('correct');
+    if (card.answer === 'خطأ') fB.classList.add('correct');
+    if (selected === 'صح' && !isCorrect) tB.classList.add('wrong');
+    if (selected === 'خطأ' && !isCorrect) fB.classList.add('wrong');
+  }
+  if (isCorrect) quizCorrect++;
+  showFeedback(isCorrect, card);
+}
+
+function checkWritten() {
+  if (quizAnswered) return;
+  const inp = document.getElementById('writtenInput');
+  const val = inp.value.trim(); if (!val) return;
+  quizAnswered = true;
+  const card = quizCards[quizCurrent];
+  const isCorrect = val.toLowerCase() === card.answer.trim().toLowerCase();
+  inp.style.borderColor = isCorrect ? 'var(--correct)' : 'var(--wrong)';
+  document.getElementById('questionCard').classList.add(isCorrect ? 'correct-flash' : 'wrong-flash');
+  if (isCorrect) quizCorrect++;
+  showFeedback(isCorrect, card);
+}
+
+function showFeedback(isCorrect, card) {
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+  let msg = isCorrect ? '✓ إجابة صحيحة!' : `✗ الإجابة الصحيحة: ${card.answer}`;
+  if (card.explanation) msg += `<br><span style="opacity:0.8;font-size:0.82rem">${card.explanation}</span>`;
+  fb.innerHTML = msg;
+  const nb = document.getElementById('nextBtn');
+  nb.className = 'next-btn show';
+  nb.textContent = quizCurrent < quizCards.length-1 ? 'التالي ←' : 'النتائج 🏆';
+}
+
+function nextQuestion() {
+  quizCurrent++;
+  if (quizCurrent >= quizCards.length) showResults();
+  else renderQuestion();
+}
+
+function quitQuiz() {
+  if (confirm('تريد الخروج من الامتحان؟')) goHome();
+}
+
+function showResults() {
+  showView('resultsView');
+  const total = quizCards.length;
+  const pct = Math.round((quizCorrect/total)*100);
+  document.getElementById('correctCount').textContent = quizCorrect;
+  document.getElementById('wrongCount').textContent = total-quizCorrect;
+  document.getElementById('scorePercent').textContent = pct+'%';
+  let emoji,title,sub;
+  if (pct>=90){emoji='🏆';title='ممتاز!';sub='أداء رائع جداً!';}
+  else if(pct>=70){emoji='🎯';title='جيد جداً!';sub='تقدر تحسّن أكثر!';}
+  else if(pct>=50){emoji='📚';title='مقبول';sub='راجع المادة وأعد المحاولة';}
+  else{emoji='💪';title='تحتاج مراجعة';sub='ما تستسلم، حاول مرة ثانية!';}
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent = `${quizCorrect} من ${total} صحيحة — ${sub}`;
+}
+
+function restartQuiz() {
+  if (currentExamData) beginQuiz(currentExamData);
+}
+
+function goHome() {
+  pendingFiles = [];
+  document.getElementById('fileInput').value = '';
+  document.getElementById('uploadError').style.display = 'none';
+  renderFilesList();
+  showView('homeView');
+}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+
+// ---- local categories state (loaded from catalog or defaults) ----
+let localCategories = [];
+const DEFAULT_ICONS = ['🌍','💻','🔬','➕','📚','🎯','🏛','🎨','🏋','🎵','🍎','🌱','🧪','📐','💡','🚀','🐾','🏆','✈️','🎭'];
+
+function initAdmin() {
+  // seed from catalog if loaded, else defaults
+  if (catalog && catalog.categories) {
+    localCategories = catalog.categories.map(c => ({ id: c.id, name: c.name, icon: c.icon }));
+  } else {
+    localCategories = [
+      { id:'languages', name:'اللغات', icon:'🌍' },
+      { id:'programming', name:'البرمجة', icon:'💻' },
+      { id:'science', name:'العلوم', icon:'🔬' },
+      { id:'math', name:'الرياضيات', icon:'➕' },
+    ];
+  }
+  renderCategorySelect();
+  renderCatList();
+  renderIconPicker();
+  refreshCatalogPreview();
+  addOptionField(); addOptionField(); addOptionField(); addOptionField();
+}
+
+function initAdminOptions() { /* replaced by initAdmin */ }
+
+// ---- Admin Tabs ----
+function switchAdminTab(panelId, btn) {
+  document.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+  btn.classList.add('active');
+  if (panelId === 'tabCategories') renderCatList();
+  if (panelId === 'tabCatalog') refreshCatalogPreview();
+}
+
+// ---- Category select in exam form ----
+function renderCategorySelect() {
+  const sel = document.getElementById('a_category');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  localCategories.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.icon + ' ' + c.name;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+// ---- Category list in tab 2 ----
+function renderCatList() {
+  const list = document.getElementById('catList');
+  if (!list) return;
+  if (!localCategories.length) {
+    list.innerHTML = `<div class="empty-state"><span class="e-icon">🗂</span><p>ما في أقسام بعد</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  localCategories.forEach((cat, i) => {
+    const item = document.createElement('div');
+    item.className = 'cat-item';
+    item.innerHTML = `
+      <span class="cat-item-icon">${cat.icon}</span>
+      <div class="cat-item-info">
+        <div class="cat-item-name">${cat.name}</div>
+        <div class="cat-item-id">${cat.id}</div>
+      </div>
+      <div class="cat-item-actions">
+        <button class="cat-action-btn del" onclick="deleteCategory(${i})" title="حذف">🗑</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+// ---- Icon picker ----
+function renderIconPicker() {
+  const picker = document.getElementById('iconPicker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  DEFAULT_ICONS.forEach(icon => {
+    const btn = document.createElement('button');
+    btn.className = 'icon-opt';
+    btn.textContent = icon;
+    btn.type = 'button';
+    btn.onclick = () => {
+      document.getElementById('nc_icon').value = icon;
+      picker.querySelectorAll('.icon-opt').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    picker.appendChild(btn);
+  });
+}
+
+// ---- Add category ----
+function addCategory() {
+  const name = document.getElementById('nc_name').value.trim();
+  const id = document.getElementById('nc_id').value.trim().replace(/\s+/g,'_').toLowerCase();
+  const icon = document.getElementById('nc_icon').value.trim() || '📦';
+  if (!name) { showToast('⚠️ اكتب اسم القسم', 'error'); return; }
+  if (!id) { showToast('⚠️ اكتب ID القسم', 'error'); return; }
+  if (localCategories.find(c => c.id === id)) { showToast('⚠️ هذا الـ ID موجود مسبقاً', 'error'); return; }
+  localCategories.push({ id, name, icon });
+  document.getElementById('nc_name').value = '';
+  document.getElementById('nc_id').value = '';
+  document.getElementById('nc_icon').value = '';
+  document.querySelectorAll('.icon-opt').forEach(b => b.classList.remove('selected'));
+  renderCatList();
+  renderCategorySelect();
+  refreshCatalogPreview();
+  showToast('✓ تمت إضافة القسم: ' + name, 'success');
+}
+
+// ---- Delete category ----
+function deleteCategory(i) {
+  const cat = localCategories[i];
+  if (!confirm('حذف قسم "' + cat.name + '"؟')) return;
+  localCategories.splice(i, 1);
+  renderCatList();
+  renderCategorySelect();
+  refreshCatalogPreview();
+  showToast('تم حذف القسم', 'success');
+}
+
+// ---- Catalog preview & download ----
+function buildCatalogJSON() {
+  // merge with existing catalog exams if available
+  const cats = localCategories.map(c => {
+    const existing = catalog?.categories?.find(ec => ec.id === c.id);
+    return { id: c.id, name: c.name, icon: c.icon, exams: existing?.exams || [] };
+  });
+  return { categories: cats };
+}
+
+function refreshCatalogPreview() {
+  const el = document.getElementById('catalogPreview');
+  if (!el) return;
+  el.textContent = JSON.stringify(buildCatalogJSON(), null, 2);
+}
+
+function downloadCatalog() {
+  const data = buildCatalogJSON();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'catalog.json'; a.click();
+  showToast('✓ تم تحميل catalog.json', 'success');
+}
+
+function openAddQuestion() {
+  document.getElementById('m_question').value = '';
+  document.getElementById('m_image').value = '';
+  document.getElementById('m_answer').value = '';
+  document.getElementById('m_explanation').value = '';
+  document.getElementById('m_type').value = 'mcq';
+  document.getElementById('m_optionsList').innerHTML = '';
+  addOptionField(); addOptionField(); addOptionField(); addOptionField();
+  onTypeChange();
+  document.getElementById('questionModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('questionModal').classList.remove('open'); }
+
+function onTypeChange() {
+  const type = document.getElementById('m_type').value;
+  document.getElementById('m_optionsSection').style.display = type==='mcq' ? 'block' : 'none';
+  document.getElementById('m_tfAnswer').style.display = type==='truefalse' ? 'block' : 'none';
+  document.getElementById('m_answer').style.display = type!=='truefalse' ? 'block' : 'none';
+  document.getElementById('m_answerLabel').textContent = type==='written' ? 'الإجابة المقبولة' : 'الإجابة الصحيحة';
+}
+
+function addOptionField() {
+  const list = document.getElementById('m_optionsList');
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.innerHTML = `<input class="form-input" placeholder="خيار..." /><button class="opt-del-btn" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(row);
+}
+
+function saveQuestion() {
+  const type = document.getElementById('m_type').value;
+  const question = document.getElementById('m_question').value.trim();
+  const image = document.getElementById('m_image').value.trim();
+  const explanation = document.getElementById('m_explanation').value.trim();
+  if (!question) { showToast('⚠️ اكتب السؤال أولاً', 'error'); return; }
+
+  let answer, options;
+  if (type === 'mcq') {
+    options = [...document.querySelectorAll('#m_optionsList .option-row input')]
+      .map(i => i.value.trim()).filter(Boolean);
+    answer = document.getElementById('m_answer').value.trim();
+    if (options.length < 2) { showToast('⚠️ أضف خيارين على الأقل', 'error'); return; }
+    if (!answer) { showToast('⚠️ حدد الإجابة الصحيحة', 'error'); return; }
+    if (!options.includes(answer)) { showToast('⚠️ الإجابة يجب تكون ضمن الخيارات', 'error'); return; }
+  } else if (type === 'truefalse') {
+    answer = document.getElementById('m_tfAnswer').value;
+  } else {
+    answer = document.getElementById('m_answer').value.trim();
+    if (!answer) { showToast('⚠️ حدد الإجابة الصحيحة', 'error'); return; }
+  }
+
+  const q = { question, type, answer };
+  if (image) q.image = image;
+  if (options) q.options = options;
+  if (explanation) q.explanation = explanation;
+
+  adminQuestions.push(q);
+  refreshAdminList();
+  closeModal();
+  showToast('✓ تمت الإضافة', 'success');
+}
+
+function refreshAdminList() {
+  const list = document.getElementById('adminQuestionsList');
+  document.getElementById('qCount').textContent = adminQuestions.length;
+  if (!adminQuestions.length) {
+    list.innerHTML = `<div class="empty-state"><span class="e-icon">📝</span><p>ما في أسئلة بعد<br>اضغط "أضف سؤال" للبداية</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  adminQuestions.forEach((q, i) => {
+    const item = document.createElement('div');
+    item.className = 'q-item';
+    item.innerHTML = `
+      <span class="q-item-num">${i+1}</span>
+      <span class="q-item-text">${q.question}</span>
+      <span class="q-item-type">${q.type}</span>
+      <button class="q-item-del" onclick="deleteQuestion(${i})">🗑</button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function deleteQuestion(i) {
+  adminQuestions.splice(i, 1);
+  refreshAdminList();
+}
+
+function downloadExam() {
+  if (!adminQuestions.length) { showToast('⚠️ أضف أسئلة أولاً', 'error'); return; }
+  const filename = (document.getElementById('a_filename').value.trim() || 'exam') + '.json';
+  const blob = new Blob([JSON.stringify(adminQuestions, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = filename; a.click();
+  showToast('✓ تم التحميل: ' + filename, 'success');
+}
+
+function previewExam() {
+  if (!adminQuestions.length) { showToast('⚠️ أضف أسئلة أولاً', 'error'); return; }
+  currentExamData = adminQuestions;
+  beginQuiz([...adminQuestions]);
+}
+
+// ============================================================
+// SIDEBAR TOGGLE (MOBILE)
+// ============================================================
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 2500);
+}
+</script>
+</body>
+</html>
