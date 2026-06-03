@@ -1,0 +1,32 @@
+{
+  "categories": [
+    {
+      "id": "languages",
+      "name": "اللغات",
+      "icon": "🌍",
+      "exams": [
+        {
+          "id": "english_basics",
+          "title": "الإنجليزي - الأساسيات",
+          "description": "مفردات وجمل أساسية",
+          "count": 6,
+          "file": "exams/languages/english_basics.json"
+        }
+      ]
+    },
+    {
+      "id": "programming",
+      "name": "البرمجة",
+      "icon": "💻",
+      "exams": [
+        {
+          "id": "javascript_basics",
+          "title": "JavaScript - الأساسيات",
+          "description": "متغيرات، دوال، وأكثر",
+          "count": 15,
+          "file": "exams/programming/javascript_basics.json"
+        }
+      ]
+    }
+  ]
+}
